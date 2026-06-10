@@ -5,25 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Off Day Tracker — Yamin Ahmed</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <style>
   :root {
-    --bg: #0a0a0f;
-    --grid: rgba(255,255,255,0.04);
-    --card: rgba(255,255,255,0.05);
-    --card-border: rgba(255,255,255,0.09);
-    --got: #22c55e;
-    --got-dim: rgba(34,197,94,0.15);
-    --missed: #ef4444;
-    --missed-dim: rgba(239,68,68,0.15);
-    --accent: #f59e0b;
-    --accent-dim: rgba(245,158,11,0.12);
-    --text: #f1f5f9;
-    --text-muted: #64748b;
-    --text-sub: #94a3b8;
-    --radius: 16px;
-    --font-head: 'Syne', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --bg:           #0a0a0f;
+    --grid:         rgba(255,255,255,0.04);
+    --card:         rgba(255,255,255,0.05);
+    --card-border:  rgba(255,255,255,0.09);
+    --got:          #22c55e;
+    --got-dim:      rgba(34,197,94,0.15);
+    --missed:       #ef4444;
+    --missed-dim:   rgba(239,68,68,0.15);
+    --accent:       #f59e0b;
+    --accent-dim:   rgba(245,158,11,0.12);
+    --text:         #f1f5f9;
+    --text-muted:   #64748b;
+    --text-sub:     #94a3b8;
+    --radius:       16px;
+    --font-head:    'Syne', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,511 +38,282 @@
     overflow-x: hidden;
   }
 
-  /* Grid background */
   body::before {
     content: '';
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background-image:
       linear-gradient(var(--grid) 1px, transparent 1px),
       linear-gradient(90deg, var(--grid) 1px, transparent 1px);
     background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
+    pointer-events: none; z-index: 0;
   }
 
   body::after {
     content: '';
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
+    pointer-events: none; z-index: 0;
   }
 
   .app {
-    position: relative;
-    z-index: 1;
-    max-width: 480px;
-    margin: 0 auto;
+    position: relative; z-index: 1;
+    max-width: 480px; margin: 0 auto;
     padding: 24px 16px 100px;
   }
 
-  /* Header */
-  .header {
-    text-align: center;
-    margin-bottom: 32px;
-    animation: fadeDown 0.5s ease both;
-  }
-
-  .header-badge {
-    display: inline-block;
+  /* Firebase status */
+  .fb-status {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    margin-bottom: 18px;
     font-family: var(--font-mono);
     font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--accent);
-    background: var(--accent-dim);
+    letter-spacing: 0.08em;
+    width: fit-content;
+    margin-left: auto; margin-right: auto;
+    animation: fadeDown 0.4s ease both;
+  }
+  .fb-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #f59e0b;
+    animation: pulse 1.5s infinite;
+  }
+  .fb-dot.connected { background: var(--got); animation: none; }
+  .fb-dot.error     { background: var(--missed); animation: none; }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0.5; transform:scale(0.8); }
+  }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 28px; animation: fadeDown 0.5s ease both; }
+  .header-badge {
+    display: inline-block;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-dim);
     border: 1px solid rgba(245,158,11,0.25);
-    padding: 4px 12px;
-    border-radius: 100px;
-    margin-bottom: 12px;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 12px;
   }
-
-  .header h1 {
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    line-height: 1.1;
-  }
-
-  .header h1 span {
-    color: var(--accent);
-  }
-
-  .header-sub {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 6px;
-    letter-spacing: 0.05em;
-  }
+  .header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
+  .header h1 span { color: var(--accent); }
+  .header-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 
   /* Cards */
   .card {
     background: var(--card);
     border: 1px solid var(--card-border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
-    backdrop-filter: blur(12px);
+    border-radius: var(--radius); padding: 20px;
+    margin-bottom: 14px; backdrop-filter: blur(12px);
     animation: fadeUp 0.4s ease both;
   }
-
   .card-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
   }
+  .card-label::after { content:''; flex:1; height:1px; background: var(--card-border); }
 
-  .card-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--card-border);
-  }
-
-  /* Stats row */
+  /* Stats */
   .stats-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; margin-bottom: 14px;
     animation: fadeUp 0.4s 0.05s ease both;
   }
-
   .stat-box {
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    padding: 14px 10px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 12px; padding: 14px 10px; text-align: center;
+    position: relative; overflow: hidden;
   }
-
-  .stat-box.got { border-color: rgba(34,197,94,0.3); }
-  .stat-box.got::before { background: var(--got-dim); }
+  .stat-box::before { content:''; position:absolute; inset:0; }
+  .stat-box.got    { border-color: rgba(34,197,94,0.3); }
+  .stat-box.got::before  { background: var(--got-dim); }
   .stat-box.missed { border-color: rgba(239,68,68,0.3); }
   .stat-box.missed::before { background: var(--missed-dim); }
   .stat-box.balance { border-color: rgba(245,158,11,0.3); }
   .stat-box.balance::before { background: var(--accent-dim); }
-
-  .stat-box::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-  }
-
-  .stat-num {
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1;
-    position: relative;
-  }
-
-  .stat-box.got .stat-num { color: var(--got); }
+  .stat-num { font-size: 28px; font-weight: 800; line-height: 1; position: relative; }
+  .stat-box.got .stat-num    { color: var(--got); }
   .stat-box.missed .stat-num { color: var(--missed); }
-  .stat-box.balance .stat-num { color: var(--accent); }
-
+  .stat-box.balance .stat-num{ color: var(--accent); }
   .stat-lbl {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-top: 4px;
-    position: relative;
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted); margin-top: 4px; position: relative;
   }
 
-  /* Chart */
-  .chart-wrap {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    animation: fadeUp 0.4s 0.1s ease both;
-  }
-
-  .donut-container {
-    position: relative;
-    width: 140px;
-    height: 140px;
-    flex-shrink: 0;
-  }
-
+  /* Donut */
+  .chart-wrap { display: flex; align-items: center; gap: 20px; animation: fadeUp 0.4s 0.1s ease both; }
+  .donut-container { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
   .donut-container svg { transform: rotate(-90deg); }
-
   .donut-center {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
   }
-
-  .donut-pct {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--got);
-    line-height: 1;
-  }
-
+  .donut-pct { font-size: 22px; font-weight: 800; color: var(--got); line-height: 1; }
   .donut-pct-label {
-    font-family: var(--font-mono);
-    font-size: 8px;
-    color: var(--text-muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-top: 2px;
+    font-family: var(--font-mono); font-size: 8px;
+    color: var(--text-muted); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-top: 2px;
   }
+  .chart-legend { flex: 1; }
+  .legend-item { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-name { font-size: 13px; font-weight: 600; color: var(--text-sub); }
+  .legend-val  { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
 
-  .chart-legend {
-    flex: 1;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .legend-info { flex: 1; }
-
-  .legend-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-sub);
-  }
-
-  .legend-val {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
-  /* Balance editor */
-  .balance-editor {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: fadeUp 0.4s 0.15s ease both;
-  }
-
+  /* Balance */
+  .balance-editor { display: flex; align-items: center; gap: 12px; animation: fadeUp 0.4s 0.15s ease both; }
   .bal-label { flex: 1; }
-  .bal-label-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .bal-label-sub {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--text-muted);
-  }
-
-  .bal-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
+  .bal-label-title { font-size: 14px; font-weight: 700; }
+  .bal-label-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+  .bal-controls { display: flex; align-items: center; gap: 8px; }
   .bal-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 36px; height: 36px; border-radius: 10px;
     border: 1px solid var(--card-border);
-    background: rgba(255,255,255,0.07);
-    color: var(--text);
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-    font-family: var(--font-head);
-    font-weight: 700;
-    line-height: 1;
+    background: rgba(255,255,255,0.07); color: var(--text);
+    font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; font-family: var(--font-head); font-weight: 700;
   }
-
   .bal-btn:hover { background: rgba(255,255,255,0.12); border-color: var(--accent); color: var(--accent); }
-
-  .bal-num {
-    font-size: 24px;
-    font-weight: 800;
-    color: var(--accent);
-    width: 40px;
-    text-align: center;
-    font-family: var(--font-mono);
-  }
+  .bal-num { font-size: 24px; font-weight: 800; color: var(--accent); width: 40px; text-align: center; font-family: var(--font-mono); }
 
   /* Add entry */
-  .add-card {
-    animation: fadeUp 0.4s 0.2s ease both;
-  }
-
+  .add-card { animation: fadeUp 0.4s 0.2s ease both; }
   .date-input {
-    width: 100%;
-    background: rgba(255,255,255,0.06);
+    width: 100%; background: rgba(255,255,255,0.06);
     border: 1px solid var(--card-border);
-    border-radius: 12px;
-    padding: 12px 16px;
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    outline: none;
-    margin-bottom: 12px;
-    transition: border-color 0.2s;
+    border-radius: 12px; padding: 12px 16px;
+    color: var(--text); font-family: var(--font-mono); font-size: 13px;
+    outline: none; margin-bottom: 12px; transition: border-color 0.2s;
     -webkit-appearance: none;
   }
-
   .date-input:focus { border-color: var(--accent); }
   .date-input::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
-
-  .btn-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .btn {
-    padding: 14px 12px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    font-family: var(--font-head);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.18s;
-    letter-spacing: 0.02em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    padding: 14px 12px; border-radius: 12px; border: 1px solid transparent;
+    font-family: var(--font-head); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
   }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+  .btn-got    { background: var(--got-dim);    border-color: rgba(34,197,94,0.35);  color: var(--got); }
+  .btn-got:hover:not(:disabled)    { background: rgba(34,197,94,0.25);  transform: translateY(-1px); }
+  .btn-missed { background: var(--missed-dim); border-color: rgba(239,68,68,0.35);  color: var(--missed); }
+  .btn-missed:hover:not(:disabled) { background: rgba(239,68,68,0.25);  transform: translateY(-1px); }
 
-  .btn-got {
-    background: var(--got-dim);
-    border-color: rgba(34,197,94,0.35);
-    color: var(--got);
+  /* Export */
+  .export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; animation: fadeUp 0.4s 0.25s ease both; }
+  .export-btn {
+    padding: 14px 12px; border-radius: 14px;
+    font-family: var(--font-head); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
   }
-
-  .btn-got:hover { background: rgba(34,197,94,0.25); transform: translateY(-1px); }
-
-  .btn-missed {
-    background: var(--missed-dim);
-    border-color: rgba(239,68,68,0.35);
-    color: var(--missed);
+  .export-jpeg {
+    background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.08));
+    border: 1px solid rgba(245,158,11,0.35); color: var(--accent);
   }
-
-  .btn-missed:hover { background: rgba(239,68,68,0.25); transform: translateY(-1px); }
+  .export-jpeg:hover { background: linear-gradient(135deg, rgba(245,158,11,0.28), rgba(245,158,11,0.15)); transform: translateY(-1px); }
+  .export-pdf {
+    background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(99,102,241,0.08));
+    border: 1px solid rgba(99,102,241,0.35); color: #818cf8;
+  }
+  .export-pdf:hover { background: linear-gradient(135deg, rgba(99,102,241,0.28), rgba(99,102,241,0.15)); transform: translateY(-1px); }
 
   /* History */
-  .history-card {
-    animation: fadeUp 0.4s 0.25s ease both;
-  }
-
-  .history-empty {
-    text-align: center;
-    padding: 30px 0;
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 12px;
-  }
-
+  .history-card { animation: fadeUp 0.4s 0.3s ease both; }
+  .history-empty { text-align: center; padding: 28px 0; color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; }
   .history-list { display: flex; flex-direction: column; gap: 8px; }
-
   .entry {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    display: flex; align-items: center; gap: 12px;
     background: rgba(255,255,255,0.03);
     border: 1px solid var(--card-border);
-    border-radius: 11px;
-    padding: 11px 14px;
-    transition: all 0.2s;
+    border-radius: 11px; padding: 11px 14px;
     animation: slideIn 0.25s ease both;
   }
-
-  .entry.got-entry { border-left: 3px solid var(--got); }
+  .entry.got-entry    { border-left: 3px solid var(--got); }
   .entry.missed-entry { border-left: 3px solid var(--missed); }
-
-  .entry-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .entry.got-entry .entry-dot { background: var(--got); box-shadow: 0 0 8px var(--got); }
+  .entry-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .entry.got-entry .entry-dot    { background: var(--got);    box-shadow: 0 0 8px var(--got); }
   .entry.missed-entry .entry-dot { background: var(--missed); box-shadow: 0 0 8px var(--missed); }
-
   .entry-info { flex: 1; }
-
-  .entry-date {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text);
-  }
-
-  .entry-status {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    margin-top: 2px;
-  }
-
-  .entry.got-entry .entry-status { color: var(--got); }
+  .entry-date   { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+  .entry-status { font-family: var(--font-mono); font-size: 10px; margin-top: 2px; }
+  .entry.got-entry .entry-status    { color: var(--got); }
   .entry.missed-entry .entry-status { color: var(--missed); }
-
   .entry-del {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: rgba(239,68,68,0.08);
-    border: 1px solid rgba(239,68,68,0.2);
-    color: rgba(239,68,68,0.7);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    transition: all 0.15s;
-    flex-shrink: 0;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+    color: rgba(239,68,68,0.7); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s; flex-shrink: 0;
   }
-
   .entry-del:hover { background: rgba(239,68,68,0.2); color: var(--missed); }
-
-  /* Export btn */
-  .export-btn {
-    width: 100%;
-    padding: 15px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.1));
-    border: 1px solid rgba(245,158,11,0.35);
-    color: var(--accent);
-    font-family: var(--font-head);
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.03em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 16px;
-    animation: fadeUp 0.4s 0.3s ease both;
-  }
-
-  .export-btn:hover { background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(245,158,11,0.18)); transform: translateY(-1px); }
 
   /* Toast */
   .toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
+    position: fixed; bottom: 24px; left: 50%;
     transform: translateX(-50%) translateY(80px);
-    background: rgba(20,20,28,0.95);
-    border: 1px solid var(--card-border);
-    border-radius: 100px;
-    padding: 10px 20px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text);
-    z-index: 999;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    white-space: nowrap;
-    backdrop-filter: blur(12px);
+    background: rgba(20,20,28,0.97); border: 1px solid var(--card-border);
+    border-radius: 100px; padding: 10px 20px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--text);
+    z-index: 999; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    white-space: nowrap; backdrop-filter: blur(12px);
   }
-
   .toast.show { transform: translateX(-50%) translateY(0); }
 
-  /* Export overlay (hidden) */
-  #export-frame {
-    position: fixed;
-    top: -9999px;
-    left: -9999px;
-    width: 480px;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-head);
-    padding: 32px 28px;
-    border: 1px solid var(--card-border);
+  /* Loader */
+  .loader {
+    position: fixed; inset: 0;
+    background: var(--bg); z-index: 50;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    transition: opacity 0.4s;
   }
+  .loader.hidden { opacity: 0; pointer-events: none; }
+  .loader-spinner {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.07);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  .loader-text { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.1em; }
 
-  @keyframes fadeDown {
-    from { opacity: 0; transform: translateY(-16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-12px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
+  @keyframes spin    { to { transform: rotate(360deg); } }
+  @keyframes fadeDown{ from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp  { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
 </style>
 </head>
 <body>
 
-<div class="app" id="main-app">
+<div class="loader" id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">Connecting to Firebase...</div>
+</div>
 
-  <!-- Header -->
+<div class="app">
+
+  <div class="fb-status" id="fb-status">
+    <div class="fb-dot" id="fb-dot"></div>
+    <span id="fb-status-text">Connecting...</span>
+  </div>
+
   <div class="header">
     <div class="header-badge">Weekly Tracker</div>
     <h1>Off Day<br><span>Tracker</span></h1>
     <div class="header-sub">Yamin Ahmed · Personal Dashboard</div>
   </div>
 
-  <!-- Stats Row -->
   <div class="stats-row">
     <div class="stat-box got">
       <div class="stat-num" id="stat-got">0</div>
@@ -556,13 +329,12 @@
     </div>
   </div>
 
-  <!-- Chart Card -->
   <div class="card chart-wrap">
     <div class="donut-container">
       <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle id="donut-bg" cx="70" cy="70" r="54" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="20"/>
+        <circle cx="70" cy="70" r="54" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="20"/>
         <circle id="donut-missed" cx="70" cy="70" r="54" fill="none" stroke="#ef4444" stroke-width="20" stroke-dasharray="0 339.292" stroke-linecap="round"/>
-        <circle id="donut-got" cx="70" cy="70" r="54" fill="none" stroke="#22c55e" stroke-width="20" stroke-dasharray="0 339.292" stroke-linecap="round"/>
+        <circle id="donut-got"    cx="70" cy="70" r="54" fill="none" stroke="#22c55e" stroke-width="20" stroke-dasharray="0 339.292" stroke-linecap="round"/>
       </svg>
       <div class="donut-center">
         <div class="donut-pct" id="donut-pct">—</div>
@@ -572,21 +344,21 @@
     <div class="chart-legend">
       <div class="legend-item">
         <div class="legend-dot" style="background:#22c55e;box-shadow:0 0 8px #22c55e;"></div>
-        <div class="legend-info">
+        <div>
           <div class="legend-name">Got Off</div>
           <div class="legend-val" id="leg-got">0 days</div>
         </div>
       </div>
       <div class="legend-item">
         <div class="legend-dot" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></div>
-        <div class="legend-info">
+        <div>
           <div class="legend-name">Missed Off</div>
           <div class="legend-val" id="leg-missed">0 days</div>
         </div>
       </div>
       <div class="legend-item">
         <div class="legend-dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0b;"></div>
-        <div class="legend-info">
+        <div>
           <div class="legend-name">Pending Balance</div>
           <div class="legend-val" id="leg-bal">0 days</div>
         </div>
@@ -594,7 +366,6 @@
     </div>
   </div>
 
-  <!-- Balance Control -->
   <div class="card balance-editor">
     <div class="bal-label">
       <div class="bal-label-title">Pending Off Days</div>
@@ -607,291 +378,468 @@
     </div>
   </div>
 
-  <!-- Add Entry -->
   <div class="card add-card">
     <div class="card-label">Add Entry</div>
     <input type="date" class="date-input" id="date-pick">
     <div class="btn-row">
-      <button class="btn btn-got" onclick="addEntry('got')">✅ Got Off</button>
-      <button class="btn btn-missed" onclick="addEntry('missed')">❌ Missed Off</button>
+      <button class="btn btn-got"    id="btn-got"    onclick="addEntry('got')"    disabled>✅ Got Off</button>
+      <button class="btn btn-missed" id="btn-missed" onclick="addEntry('missed')" disabled>❌ Missed Off</button>
     </div>
   </div>
 
-  <!-- Export -->
-  <button class="export-btn" onclick="exportJPEG()">
-    ⬇ Download as JPEG
-  </button>
+  <div class="export-row">
+    <button class="export-btn export-jpeg" onclick="exportJPEG()">🖼 Download JPEG</button>
+    <button class="export-btn export-pdf"  onclick="exportPDF()">📄 Download PDF</button>
+  </div>
 
-  <!-- History -->
   <div class="card history-card">
     <div class="card-label">History Log</div>
-    <div id="history-container">
-      <div class="history-empty" id="history-empty">No entries yet. Add your first entry above ↑</div>
-      <div class="history-list" id="history-list"></div>
-    </div>
+    <div class="history-empty" id="history-empty">No entries yet. Add your first entry above ↑</div>
+    <div class="history-list" id="history-list"></div>
   </div>
 
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-  const CIRC = 2 * Math.PI * 54; // 339.292
+// ============================================================
+//  FIREBASE REALTIME DATABASE CONFIG
+//  Paste your values from:
+//  Firebase Console → Project Settings → Your Apps → SDK setup
+// ============================================================
+const FIREBASE_DB_URL = "https://off-day-tracker-cec68-default-rtdb.europe-west1.firebasedatabase.app/";
+// Example: "https://off-day-tracker-cec68-default-rtdb.europe-west1.firebasedatabase.app/"
+// ============================================================
 
-  let state = {
-    entries: [],
-    pendingBalance: 0
-  };
+const CIRC = 2 * Math.PI * 54;
+let state = { entries: [], pendingBalance: 0 };
+let dbReady = false;
 
-  function load() {
-    const saved = localStorage.getItem('offdaytracker_v1');
-    if (saved) {
-      try { state = JSON.parse(saved); } catch(e) {}
+// ---- Toast ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function setStatus(type, text) {
+  document.getElementById('fb-dot').className = 'fb-dot' + (type ? ' ' + type : '');
+  document.getElementById('fb-status-text').textContent = text;
+}
+
+// ---- Firebase REST helpers ----
+// Realtime Database has a simple REST API — no SDK needed
+async function fbGet(path) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${path}.json`);
+  if (!res.ok) throw new Error('Firebase GET failed: ' + res.status);
+  return res.json();
+}
+
+async function fbSet(path, data) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${path}.json`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('Firebase SET failed: ' + res.status);
+  return res.json();
+}
+
+async function fbDelete(path) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${path}.json`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Firebase DELETE failed: ' + res.status);
+}
+
+// ---- Init ----
+async function initApp() {
+  try {
+    const [entriesRaw, balance] = await Promise.all([
+      fbGet('entries'),
+      fbGet('balance')
+    ]);
+
+    // entriesRaw is an object keyed by date, or null
+    if (entriesRaw) {
+      state.entries = Object.values(entriesRaw).sort((a,b) => b.date.localeCompare(a.date));
     }
-    // Set today's date as default
-    const today = new Date();
-    document.getElementById('date-pick').value = today.toISOString().split('T')[0];
+    state.pendingBalance = balance || 0;
+
+    dbReady = true;
+    setStatus('connected', 'Firebase Connected');
+    document.getElementById('btn-got').disabled    = false;
+    document.getElementById('btn-missed').disabled = false;
+  } catch(e) {
+    console.error(e);
+    setStatus('error', 'Connection Failed — Check DB URL');
+  }
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('date-pick').value = new Date().toISOString().split('T')[0];
+  render();
+}
+
+initApp();
+
+// ---- Balance ----
+async function changeBalance(delta) {
+  if (!dbReady) return;
+  state.pendingBalance = Math.max(0, state.pendingBalance + delta);
+  render();
+  try { await fbSet('balance', state.pendingBalance); }
+  catch(e) { showToast('⚠️ Balance sync failed'); }
+}
+
+// ---- Add Entry ----
+async function addEntry(type) {
+  if (!dbReady) { showToast('⚠️ Not connected'); return; }
+  const dateVal = document.getElementById('date-pick').value;
+  if (!dateVal) { showToast('⚠️ Please select a date'); return; }
+  if (state.entries.find(e => e.date === dateVal)) {
+    showToast('⚠️ Entry already exists for this date'); return;
+  }
+
+  const entry = { date: dateVal, type };
+
+  // Optimistic UI
+  state.entries.push(entry);
+  state.entries.sort((a,b) => b.date.localeCompare(a.date));
+  if (type === 'missed') state.pendingBalance = Math.max(0, state.pendingBalance + 1);
+  render();
+  showToast(type === 'got' ? '✅ Got Off saved!' : '❌ Missed Off recorded');
+
+  try {
+    // Use date as key so no duplicates possible in DB
+    await fbSet(`entries/${dateVal}`, entry);
+    if (type === 'missed') await fbSet('balance', state.pendingBalance);
+  } catch(e) {
+    showToast('❌ Sync failed');
+    // Rollback
+    state.entries = state.entries.filter(en => en.date !== dateVal);
+    if (type === 'missed') state.pendingBalance = Math.max(0, state.pendingBalance - 1);
     render();
   }
+}
 
-  function save() {
-    localStorage.setItem('offdaytracker_v1', JSON.stringify(state));
-  }
+// ---- Delete Entry ----
+async function deleteEntry(date) {
+  if (!dbReady) return;
+  const entry = state.entries.find(e => e.date === date);
+  if (!entry) return;
 
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2200);
-  }
+  state.entries = state.entries.filter(e => e.date !== date);
+  if (entry.type === 'missed') state.pendingBalance = Math.max(0, state.pendingBalance - 1);
+  render();
+  showToast('🗑️ Entry deleted');
 
-  function changeBalance(delta) {
-    state.pendingBalance = Math.max(0, state.pendingBalance + delta);
-    save();
-    render();
-  }
-
-  function addEntry(type) {
-    const dateVal = document.getElementById('date-pick').value;
-    if (!dateVal) { showToast('⚠️ Please select a date'); return; }
-
-    // Check duplicate
-    if (state.entries.find(e => e.date === dateVal)) {
-      showToast('⚠️ Entry already exists for this date');
-      return;
-    }
-
-    state.entries.push({ date: dateVal, type });
-
-    // Sort descending
+  try {
+    await fbDelete(`entries/${date}`);
+    if (entry.type === 'missed') await fbSet('balance', state.pendingBalance);
+  } catch(e) {
+    showToast('❌ Delete sync failed');
+    state.entries.push(entry);
     state.entries.sort((a,b) => b.date.localeCompare(a.date));
-
-    if (type === 'missed') {
-      state.pendingBalance = Math.max(0, state.pendingBalance + 1);
-    }
-
-    save();
+    if (entry.type === 'missed') state.pendingBalance++;
     render();
-    showToast(type === 'got' ? '✅ Got Off added!' : '❌ Missed Off recorded');
+  }
+}
+
+// ---- Helpers ----
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+}
+
+function getStats() {
+  const got    = state.entries.filter(e => e.type === 'got').length;
+  const missed = state.entries.filter(e => e.type === 'missed').length;
+  const total  = got + missed;
+  const pct    = total > 0 ? Math.round((got/total)*100) : 0;
+  return { got, missed, total, pct, balance: state.pendingBalance };
+}
+
+// ---- Render ----
+function render() {
+  const { got, missed, total, pct, balance } = getStats();
+
+  document.getElementById('stat-got').textContent     = got;
+  document.getElementById('stat-missed').textContent  = missed;
+  document.getElementById('stat-balance').textContent = balance;
+  document.getElementById('bal-display').textContent  = balance;
+  document.getElementById('leg-got').textContent    = got    + (got    !== 1 ? ' days' : ' day');
+  document.getElementById('leg-missed').textContent = missed + (missed !== 1 ? ' days' : ' day');
+  document.getElementById('leg-bal').textContent    = balance+ (balance!== 1 ? ' days' : ' day');
+
+  const gotArc    = document.getElementById('donut-got');
+  const missedArc = document.getElementById('donut-missed');
+  const pctEl     = document.getElementById('donut-pct');
+
+  if (total === 0) {
+    gotArc.setAttribute('stroke-dasharray',    `0 ${CIRC}`);
+    missedArc.setAttribute('stroke-dasharray', `0 ${CIRC}`);
+    pctEl.textContent = '—';
+  } else {
+    const gotLen    = (got/total) * CIRC;
+    const missedLen = (missed/total) * CIRC;
+    gotArc.setAttribute('stroke-dasharray',    `${gotLen} ${CIRC-gotLen}`);
+    gotArc.setAttribute('stroke-dashoffset',    '0');
+    missedArc.setAttribute('stroke-dasharray', `${missedLen} ${CIRC-missedLen}`);
+    missedArc.setAttribute('stroke-dashoffset',`-${gotLen}`);
+    pctEl.textContent = pct + '%';
   }
 
-  function deleteEntry(date) {
-    const entry = state.entries.find(e => e.date === date);
-    if (!entry) return;
+  const listEl  = document.getElementById('history-list');
+  const emptyEl = document.getElementById('history-empty');
 
-    if (entry.type === 'missed') {
-      state.pendingBalance = Math.max(0, state.pendingBalance - 1);
+  if (state.entries.length === 0) {
+    emptyEl.style.display = 'block'; listEl.innerHTML = '';
+  } else {
+    emptyEl.style.display = 'none';
+    listEl.innerHTML = state.entries.map(e => `
+      <div class="entry ${e.type === 'got' ? 'got-entry' : 'missed-entry'}">
+        <div class="entry-dot"></div>
+        <div class="entry-info">
+          <div class="entry-date">${formatDate(e.date)}</div>
+          <div class="entry-status">${e.type === 'got' ? '✅ Got Off' : '❌ Missed Off'}</div>
+        </div>
+        <button class="entry-del" onclick="deleteEntry('${e.date}')" title="Delete">✕</button>
+      </div>
+    `).join('');
+  }
+}
+
+// ================================================================
+//  JPEG EXPORT
+// ================================================================
+async function exportJPEG() {
+  showToast('📸 Generating image...');
+  try {
+    const { got, missed, total, pct, balance } = getStats();
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;top:-9999px;left:0;width:480px;background:#0a0a0f;
+      background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);
+      background-size:40px 40px;font-family:'Syne',sans-serif;color:#f1f5f9;padding:32px 28px;box-sizing:border-box;`;
+
+    const allEntryHTML = state.entries.map(e => `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,0.04);border-radius:10px;
+        border:1px solid rgba(255,255,255,0.07);border-left:3px solid ${e.type==='got'?'#22c55e':'#ef4444'};margin-bottom:6px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:${e.type==='got'?'#22c55e':'#ef4444'};flex-shrink:0;"></div>
+        <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;">${formatDate(e.date)}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${e.type==='got'?'#22c55e':'#ef4444'};">${e.type==='got'?'✅ Got Off':'❌ Missed'}</div>
+      </div>`).join('');
+
+    el.innerHTML = `
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#f59e0b;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);padding:4px 14px;border-radius:100px;margin-bottom:10px;">Weekly Tracker</div>
+        <div style="font-size:26px;font-weight:800;letter-spacing:-0.5px;">Off Day <span style="color:#f59e0b;">Tracker</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#64748b;margin-top:5px;">Yamin Ahmed · Personal Dashboard</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:14px 10px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#22c55e;">${got}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#64748b;margin-top:4px;">Got Off</div>
+        </div>
+        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:14px 10px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#ef4444;">${missed}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#64748b;margin-top:4px;">Missed</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px 10px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#f59e0b;">${balance}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#64748b;margin-top:4px;">Balance</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px;margin-bottom:12px;">
+        <div style="margin-bottom:10px;">
+          <span style="font-size:30px;font-weight:800;color:${total===0?'#64748b':'#22c55e'};">${total===0?'—':pct+'%'}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b;margin-left:8px;">success rate</span>
+        </div>
+        ${total>0?`
+        <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:100px;overflow:hidden;margin-bottom:6px;">
+          <div style="height:100%;width:${Math.round(got/total*100)}%;background:#22c55e;border-radius:100px;"></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#94a3b8;">
+          🟢 ${got} got off &nbsp;·&nbsp; 🔴 ${missed} missed &nbsp;·&nbsp; ${total} total
+        </div>`:''}
+      </div>
+      ${state.entries.length > 0 ? `
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#64748b;margin-bottom:12px;">Full History Log</div>
+        ${allEntryHTML}
+      </div>` : ''}
+      <div style="text-align:center;margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#334155;">
+        Generated ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · Off Day Tracker · Yamin Ahmed
+      </div>`;
+
+    document.body.appendChild(el);
+    await new Promise(r => setTimeout(r, 300));
+    const canvas = await html2canvas(el, { backgroundColor:'#0a0a0f', scale:2, useCORS:true, logging:false });
+    document.body.removeChild(el);
+
+    const link = document.createElement('a');
+    link.download = `offday-tracker-${new Date().toISOString().split('T')[0]}.jpg`;
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+    showToast('✅ JPEG downloaded!');
+  } catch(e) {
+    console.error(e);
+    showToast('❌ JPEG export failed');
+  }
+}
+
+// ================================================================
+//  PDF EXPORT
+// ================================================================
+async function exportPDF() {
+  showToast('📄 Generating PDF...');
+  try {
+    const { jsPDF } = window.jspdf;
+    const { got, missed, total, pct, balance } = getStats();
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W = 210, H = 297, ml = 18, mr = 192;
+    let y = 0;
+
+    function newPage() {
+      doc.addPage();
+      doc.setFillColor(10,10,15); doc.rect(0,0,W,H,'F');
+      doc.setDrawColor(255,255,255,10); doc.setLineWidth(0.15);
+      for (let x=0;x<=W;x+=12) doc.line(x,0,x,H);
+      for (let ly=0;ly<=H;ly+=12) doc.line(0,ly,W,ly);
+      // column headers
+      doc.setFillColor(255,255,255,8); doc.rect(ml,10,mr-ml,8,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(148,163,184);
+      doc.text('#',ml+3,15.5); doc.text('DATE',ml+12,15.5);
+      doc.text('DAY',ml+68,15.5); doc.text('STATUS',ml+102,15.5); doc.text('WEEK',mr-20,15.5);
+      y = 20;
     }
 
-    state.entries = state.entries.filter(e => e.date !== date);
-    save();
-    render();
-    showToast('🗑️ Entry deleted');
-  }
+    // Background + grid
+    doc.setFillColor(10,10,15); doc.rect(0,0,W,H,'F');
+    doc.setDrawColor(255,255,255,10); doc.setLineWidth(0.15);
+    for (let x=0;x<=W;x+=12) doc.line(x,0,x,H);
+    for (let ly=0;ly<=H;ly+=12) doc.line(0,ly,W,ly);
 
-  function formatDate(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-  }
+    // Header
+    doc.setFillColor(245,158,11,20);
+    doc.roundedRect(ml,10,mr-ml,38,4,4,'F');
+    doc.setDrawColor(245,158,11,80); doc.setLineWidth(0.4);
+    doc.roundedRect(ml,10,mr-ml,38,4,4,'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.setTextColor(241,245,249);
+    doc.text('Off Day Tracker', W/2, 26, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,116,139);
+    doc.text('Yamin Ahmed  ·  Personal Dashboard', W/2, 34, {align:'center'});
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}`, W/2, 41, {align:'center'});
+    y = 56;
 
-  function render() {
-    const got = state.entries.filter(e => e.type === 'got').length;
-    const missed = state.entries.filter(e => e.type === 'missed').length;
-    const total = got + missed;
-    const balance = state.pendingBalance;
+    // Stat boxes
+    const statW = (mr-ml-8)/3;
+    [
+      { label:'Got Off',  val:got,     r:34,  g:197, b:94  },
+      { label:'Missed',   val:missed,  r:239, g:68,  b:68  },
+      { label:'Balance',  val:balance, r:245, g:158, b:11  }
+    ].forEach((s,i) => {
+      const sx = ml + i*(statW+4);
+      doc.setFillColor(s.r,s.g,s.b,25); doc.roundedRect(sx,y,statW,22,3,3,'F');
+      doc.setDrawColor(s.r,s.g,s.b,80); doc.setLineWidth(0.35); doc.roundedRect(sx,y,statW,22,3,3,'S');
+      doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(s.r,s.g,s.b);
+      doc.text(String(s.val), sx+statW/2, y+13, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(100,116,139);
+      doc.text(s.label.toUpperCase(), sx+statW/2, y+19, {align:'center'});
+    });
+    y += 30;
 
-    // Stats
-    document.getElementById('stat-got').textContent = got;
-    document.getElementById('stat-missed').textContent = missed;
-    document.getElementById('stat-balance').textContent = balance;
-    document.getElementById('bal-display').textContent = balance;
+    // Progress bar section
+    doc.setFillColor(30,30,40); doc.roundedRect(ml,y,mr-ml,28,3,3,'F');
+    doc.setDrawColor(255,255,255,12); doc.setLineWidth(0.3); doc.roundedRect(ml,y,mr-ml,28,3,3,'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(241,245,249);
+    doc.text('Success Rate:', ml+6, y+9);
+    doc.setFontSize(14); doc.setTextColor(34,197,94);
+    doc.text(total===0?'—':pct+'%', ml+42, y+9);
+    const bx = ml+6, bw = mr-ml-12;
+    doc.setFillColor(255,255,255,15); doc.roundedRect(bx,y+13,bw,4,1.5,1.5,'F');
+    if (total>0) { doc.setFillColor(34,197,94); doc.roundedRect(bx,y+13,bw*(got/total),4,1.5,1.5,'F'); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+    doc.setTextColor(34,197,94);  doc.text(`Got Off: ${got}`,    bx,    y+23);
+    doc.setTextColor(239,68,68);  doc.text(`Missed: ${missed}`,  bx+32, y+23);
+    doc.setTextColor(245,158,11); doc.text(`Balance: ${balance}`, bx+64, y+23);
+    doc.setTextColor(100,116,139);doc.text(`Total: ${total}`,     bx+100,y+23);
+    y += 36;
 
-    // Legend
-    document.getElementById('leg-got').textContent = got + ' day' + (got !== 1 ? 's' : '');
-    document.getElementById('leg-missed').textContent = missed + ' day' + (missed !== 1 ? 's' : '');
-    document.getElementById('leg-bal').textContent = balance + ' day' + (balance !== 1 ? 's' : '');
-
-    // Donut chart
-    const gotArc = document.getElementById('donut-got');
-    const missedArc = document.getElementById('donut-missed');
-    const pctEl = document.getElementById('donut-pct');
-
-    if (total === 0) {
-      gotArc.setAttribute('stroke-dasharray', `0 ${CIRC}`);
-      missedArc.setAttribute('stroke-dasharray', `0 ${CIRC}`);
-      gotArc.setAttribute('stroke-dashoffset', '0');
-      missedArc.setAttribute('stroke-dashoffset', '0');
-      pctEl.textContent = '—';
-    } else {
-      const gotFrac = got / total;
-      const missedFrac = missed / total;
-      const gotLen = gotFrac * CIRC;
-      const missedLen = missedFrac * CIRC;
-      const pct = Math.round(gotFrac * 100);
-
-      gotArc.setAttribute('stroke-dasharray', `${gotLen} ${CIRC - gotLen}`);
-      gotArc.setAttribute('stroke-dashoffset', '0');
-
-      missedArc.setAttribute('stroke-dasharray', `${missedLen} ${CIRC - missedLen}`);
-      missedArc.setAttribute('stroke-dashoffset', `-${gotLen}`);
-
-      pctEl.textContent = pct + '%';
-    }
-
-    // History
-    const listEl = document.getElementById('history-list');
-    const emptyEl = document.getElementById('history-empty');
+    // History heading
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(100,116,139);
+    doc.text('HISTORY LOG', ml, y+5);
+    doc.setDrawColor(255,255,255,15); doc.setLineWidth(0.3);
+    doc.line(ml+30, y+2, mr, y+2);
+    y += 10;
 
     if (state.entries.length === 0) {
-      emptyEl.style.display = 'block';
-      listEl.innerHTML = '';
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,116,139);
+      doc.text('No entries recorded yet.', ml, y+6);
+      y += 14;
     } else {
-      emptyEl.style.display = 'none';
-      listEl.innerHTML = state.entries.map(e => `
-        <div class="entry ${e.type === 'got' ? 'got-entry' : 'missed-entry'}">
-          <div class="entry-dot"></div>
-          <div class="entry-info">
-            <div class="entry-date">${formatDate(e.date)}</div>
-            <div class="entry-status">${e.type === 'got' ? '✅ Got Off' : '❌ Missed Off'}</div>
-          </div>
-          <button class="entry-del" onclick="deleteEntry('${e.date}')" title="Delete">✕</button>
-        </div>
-      `).join('');
-    }
-  }
+      // Table header
+      doc.setFillColor(255,255,255,8); doc.rect(ml,y,mr-ml,8,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(148,163,184);
+      doc.text('#',ml+3,y+5.5); doc.text('DATE',ml+12,y+5.5);
+      doc.text('DAY',ml+68,y+5.5); doc.text('STATUS',ml+102,y+5.5); doc.text('WEEK',mr-20,y+5.5);
+      y += 9;
 
-  async function exportJPEG() {
-    showToast('📸 Generating image...');
-    try {
-      // Build a clean export element
-      const exportEl = document.createElement('div');
-      exportEl.style.cssText = `
-        width: 480px;
-        background: #0a0a0f;
-        background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-        background-size: 40px 40px;
-        font-family: 'Syne', sans-serif;
-        color: #f1f5f9;
-        padding: 32px 28px;
-        box-sizing: border-box;
-      `;
+      state.entries.forEach((e, i) => {
+        if (y > H-22) newPage();
 
-      const got = state.entries.filter(e => e.type === 'got').length;
-      const missed = state.entries.filter(e => e.type === 'missed').length;
-      const total = got + missed;
-      const balance = state.pendingBalance;
-      const pct = total > 0 ? Math.round((got/total)*100) : 0;
+        if (i%2===0) { doc.setFillColor(255,255,255,4); doc.rect(ml,y,mr-ml,8,'F'); }
 
-      const recentEntries = state.entries.slice(0, 10).map(e => `
-        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.08);border-left:3px solid ${e.type==='got'?'#22c55e':'#ef4444'}">
-          <div style="width:7px;height:7px;border-radius:50%;background:${e.type==='got'?'#22c55e':'#ef4444'};flex-shrink:0;"></div>
-          <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#f1f5f9;">${formatDate(e.date)}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${e.type==='got'?'#22c55e':'#ef4444'};">${e.type==='got'?'✅ Got Off':'❌ Missed'}</div>
-        </div>
-      `).join('');
+        const d = new Date(e.date+'T00:00:00');
+        const bc = e.type==='got' ? [34,197,94] : [239,68,68];
 
-      exportEl.innerHTML = `
-        <div style="text-align:center;margin-bottom:24px;">
-          <div style="display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#f59e0b;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);padding:4px 14px;border-radius:100px;margin-bottom:10px;">Weekly Tracker</div>
-          <div style="font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1.1;">Off Day <span style="color:#f59e0b;">Tracker</span></div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#64748b;margin-top:5px;">Yamin Ahmed · Personal Dashboard</div>
-        </div>
+        doc.setFillColor(bc[0],bc[1],bc[2]); doc.rect(ml,y,1.5,8,'F');
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-          <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:14px 10px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#22c55e;">${got}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;margin-top:4px;">Got Off</div>
-          </div>
-          <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:14px 10px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#ef4444;">${missed}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;margin-top:4px;">Missed</div>
-          </div>
-          <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px 10px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#f59e0b;">${balance}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;margin-top:4px;">Balance</div>
-          </div>
-        </div>
-
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:16px;">
-          <div style="text-align:center;min-width:80px;">
-            <div style="font-size:32px;font-weight:800;color:${total===0?'#64748b':'#22c55e'};">${total===0?'—':pct+'%'}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#64748b;letter-spacing:0.08em;">got off rate</div>
-          </div>
-          <div style="flex:1;">
-            <div style="margin-bottom:8px;">
-              <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:#94a3b8;margin-bottom:4px;"><span>🟢 Got Off</span><span>${got}</span></div>
-              <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:100px;overflow:hidden;"><div style="height:100%;width:${total===0?0:Math.round(got/total*100)}%;background:#22c55e;border-radius:100px;"></div></div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:#94a3b8;margin-bottom:4px;"><span>🔴 Missed</span><span>${missed}</span></div>
-              <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:100px;overflow:hidden;"><div style="height:100%;width:${total===0?0:Math.round(missed/total*100)}%;background:#ef4444;border-radius:100px;"></div></div>
-            </div>
-          </div>
-        </div>
-
-        ${state.entries.length > 0 ? `
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#64748b;margin-bottom:12px;">History Log</div>
-          <div style="display:flex;flex-direction:column;gap:7px;">${recentEntries}</div>
-          ${state.entries.length > 10 ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b;text-align:center;margin-top:8px;">... and ${state.entries.length-10} more entries</div>` : ''}
-        </div>` : ''}
-
-        <div style="text-align:center;margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#334155;">
-          Generated ${new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})} · Off Day Tracker
-        </div>
-      `;
-
-      document.body.appendChild(exportEl);
-      exportEl.style.position = 'fixed';
-      exportEl.style.top = '-9999px';
-      exportEl.style.left = '0';
-
-      await new Promise(r => setTimeout(r, 300));
-
-      const canvas = await html2canvas(exportEl, {
-        backgroundColor: '#0a0a0f',
-        scale: 2,
-        useCORS: true,
-        logging: false
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+        doc.setTextColor(100,116,139);
+        doc.text(String(i+1).padStart(2,'0'), ml+3, y+5.5);
+        doc.setTextColor(241,245,249);
+        doc.text(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), ml+12, y+5.5);
+        doc.setTextColor(148,163,184);
+        doc.text(d.toLocaleDateString('en-GB',{weekday:'long'}), ml+68, y+5.5);
+        doc.setTextColor(bc[0],bc[1],bc[2]);
+        doc.text(e.type==='got'?'✓ Got Off':'✗ Missed', ml+102, y+5.5);
+        doc.setTextColor(100,116,139);
+        doc.text('Wk '+getWeekNumber(d), mr-20, y+5.5);
+        y += 8;
       });
 
-      document.body.removeChild(exportEl);
-
-      const link = document.createElement('a');
-      link.download = `offday-tracker-yamin-${new Date().toISOString().split('T')[0]}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
-      link.click();
-
-      showToast('✅ Image downloaded!');
-    } catch(err) {
-      showToast('❌ Export failed. Try again.');
-      console.error(err);
+      // Totals row
+      y += 2;
+      doc.setFillColor(245,158,11,20); doc.roundedRect(ml,y,mr-ml,10,2,2,'F');
+      doc.setDrawColor(245,158,11,60); doc.setLineWidth(0.3); doc.roundedRect(ml,y,mr-ml,10,2,2,'S');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(245,158,11);
+      doc.text(`Total: ${state.entries.length} entries  ·  Got Off: ${got}  ·  Missed: ${missed}  ·  Balance: ${balance}`, W/2, y+6.5, {align:'center'});
     }
-  }
 
-  load();
+    // Footer on every page
+    const pages = doc.internal.getNumberOfPages();
+    for (let p=1; p<=pages; p++) {
+      doc.setPage(p);
+      doc.setFillColor(20,20,28); doc.rect(0,H-12,W,12,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(51,65,85);
+      doc.text('Off Day Tracker  ·  Yamin Ahmed', ml, H-4);
+      doc.text(`Page ${p} of ${pages}`, mr, H-4, {align:'right'});
+    }
+
+    doc.save(`offday-tracker-${new Date().toISOString().split('T')[0]}.pdf`);
+    showToast('✅ PDF downloaded!');
+  } catch(e) {
+    console.error(e);
+    showToast('❌ PDF export failed');
+  }
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date-yearStart)/86400000)+1)/7);
+}
 </script>
 </body>
 </html>
