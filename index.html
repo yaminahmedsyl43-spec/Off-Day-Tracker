@@ -61,21 +61,26 @@
     padding: 24px 16px 100px;
   }
 
-  /* Firebase status */
-  .fb-status {
+  /* Status row */
+  .status-row {
+    display: flex; justify-content: center; gap: 8px;
+    margin-bottom: 18px; flex-wrap: wrap;
+    animation: fadeDown 0.4s ease both;
+  }
+  .fb-status, .admin-pill {
     display: flex; align-items: center; gap: 8px;
     background: var(--card);
     border: 1px solid var(--card-border);
     border-radius: 100px;
     padding: 6px 14px;
-    margin-bottom: 18px;
     font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.08em;
-    width: fit-content;
-    margin-left: auto; margin-right: auto;
-    animation: fadeDown 0.4s ease both;
   }
+  .admin-pill { cursor: pointer; transition: all 0.15s; border: 1px solid rgba(245,158,11,0.25); color: var(--accent); }
+  .admin-pill:hover { background: rgba(245,158,11,0.1); }
+  .admin-pill.active { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: var(--got); }
+
   .fb-dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: #f59e0b;
@@ -182,7 +187,8 @@
     display: flex; align-items: center; justify-content: center;
     transition: all 0.15s; font-family: var(--font-head); font-weight: 700;
   }
-  .bal-btn:hover { background: rgba(255,255,255,0.12); border-color: var(--accent); color: var(--accent); }
+  .bal-btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); border-color: var(--accent); color: var(--accent); }
+  .bal-btn:disabled { opacity: 0.35; cursor: not-allowed; }
   .bal-num { font-size: 24px; font-weight: 800; color: var(--accent); width: 40px; text-align: center; font-family: var(--font-mono); }
 
   /* Add entry */
@@ -258,6 +264,8 @@
     font-size: 14px; transition: all 0.15s; flex-shrink: 0;
   }
   .entry-del:hover { background: rgba(239,68,68,0.2); color: var(--missed); }
+  .entry-del.locked { opacity: 0.25; cursor: not-allowed; }
+  .entry-del.locked:hover { background: rgba(239,68,68,0.08); color: rgba(239,68,68,0.7); }
 
   /* Toast */
   .toast {
@@ -288,6 +296,61 @@
   }
   .loader-text { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.1em; }
 
+  /* Login modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(5,5,8,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+    padding: 20px;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: #11121a;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    max-width: 360px; width: 100%;
+    transform: scale(0.92) translateY(10px);
+    transition: transform 0.25s;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-overlay.show .modal-box { transform: scale(1) translateY(0); }
+  .modal-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--accent-dim); border: 1px solid rgba(245,158,11,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin: 0 auto 14px;
+  }
+  .modal-title { font-size: 18px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+  .modal-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-align: center; margin-bottom: 20px; }
+  .modal-input {
+    width: 100%; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--card-border);
+    border-radius: 12px; padding: 13px 16px;
+    color: var(--text); font-family: var(--font-mono); font-size: 14px;
+    outline: none; margin-bottom: 12px; transition: border-color 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-error {
+    font-family: var(--font-mono); font-size: 11px; color: var(--missed);
+    text-align: center; margin-bottom: 12px; min-height: 14px;
+  }
+  .modal-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-btn {
+    padding: 12px; border-radius: 12px; border: 1px solid transparent;
+    font-family: var(--font-head); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .modal-btn-cancel { background: rgba(255,255,255,0.06); border-color: var(--card-border); color: var(--text-sub); }
+  .modal-btn-cancel:hover { background: rgba(255,255,255,0.1); }
+  .modal-btn-login { background: var(--accent-dim); border-color: rgba(245,158,11,0.35); color: var(--accent); }
+  .modal-btn-login:hover { background: rgba(245,158,11,0.25); }
+
   @keyframes spin    { to { transform: rotate(360deg); } }
   @keyframes fadeDown{ from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
   @keyframes fadeUp  { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
@@ -301,11 +364,32 @@
   <div class="loader-text">Connecting to Firebase...</div>
 </div>
 
+<!-- Login Modal -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal-box">
+    <div class="modal-icon">🔒</div>
+    <div class="modal-title" id="modal-title">Admin Login</div>
+    <div class="modal-sub" id="modal-sub">Enter password to enable delete &amp; balance edit</div>
+    <input type="password" class="modal-input" id="admin-pass" placeholder="Password" autocomplete="off">
+    <div class="modal-error" id="modal-error"></div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeLoginModal()">Cancel</button>
+      <button class="modal-btn modal-btn-login" id="modal-action-btn" onclick="attemptLogin()">Unlock</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
-  <div class="fb-status" id="fb-status">
-    <div class="fb-dot" id="fb-dot"></div>
-    <span id="fb-status-text">Connecting...</span>
+  <div class="status-row">
+    <div class="fb-status" id="fb-status">
+      <div class="fb-dot" id="fb-dot"></div>
+      <span id="fb-status-text">Connecting...</span>
+    </div>
+    <div class="admin-pill" id="admin-pill" onclick="onAdminPillClick()">
+      <span id="admin-pill-icon">🔒</span>
+      <span id="admin-pill-text">Admin</span>
+    </div>
   </div>
 
   <div class="header">
@@ -369,12 +453,12 @@
   <div class="card balance-editor">
     <div class="bal-label">
       <div class="bal-label-title">Pending Off Days</div>
-      <div class="bal-label-sub">Manual balance control</div>
+      <div class="bal-label-sub" id="bal-sub">Manual balance control · 🔒 Admin only</div>
     </div>
     <div class="bal-controls">
-      <button class="bal-btn" onclick="changeBalance(-1)">−</button>
+      <button class="bal-btn" id="bal-minus" onclick="changeBalance(-1)" disabled>−</button>
       <div class="bal-num" id="bal-display">0</div>
-      <button class="bal-btn" onclick="changeBalance(1)">+</button>
+      <button class="bal-btn" id="bal-plus" onclick="changeBalance(1)" disabled>+</button>
     </div>
   </div>
 
@@ -404,17 +488,26 @@
 
 <script>
 // ============================================================
-//  FIREBASE REALTIME DATABASE CONFIG
-//  Paste your values from:
-//  Firebase Console → Project Settings → Your Apps → SDK setup
+//  CONFIG — fill in your details
 // ============================================================
+
+// 1) Firebase Realtime Database URL
 const FIREBASE_DB_URL = "https://off-day-tracker-cec68-default-rtdb.europe-west1.firebasedatabase.app/";
-// Example: "https://off-day-tracker-cec68-default-rtdb.europe-west1.firebasedatabase.app/"
+
+// 2) Admin password (used to unlock delete & balance editing)
+const ADMIN_PASSWORD = "Yamin@83";
+
+// 3) Google Apps Script Web App URL (for Google Sheets sync)
+//    See instructions below for how to create this.
+const SHEETS_WEBHOOK_URL = "https://off-day-tracker-cec68-default-rtdb.europe-west1.firebasedatabase.app/";
+// Example: "https://script.google.com/macros/s/AKfycb.../exec"
+
 // ============================================================
 
 const CIRC = 2 * Math.PI * 54;
 let state = { entries: [], pendingBalance: 0 };
 let dbReady = false;
+let isAdmin = false;
 
 // ---- Toast ----
 function showToast(msg) {
@@ -430,13 +523,11 @@ function setStatus(type, text) {
 }
 
 // ---- Firebase REST helpers ----
-// Realtime Database has a simple REST API — no SDK needed
 async function fbGet(path) {
   const res = await fetch(`${FIREBASE_DB_URL}/${path}.json`);
   if (!res.ok) throw new Error('Firebase GET failed: ' + res.status);
   return res.json();
 }
-
 async function fbSet(path, data) {
   const res = await fetch(`${FIREBASE_DB_URL}/${path}.json`, {
     method: 'PUT',
@@ -446,10 +537,82 @@ async function fbSet(path, data) {
   if (!res.ok) throw new Error('Firebase SET failed: ' + res.status);
   return res.json();
 }
-
 async function fbDelete(path) {
   const res = await fetch(`${FIREBASE_DB_URL}/${path}.json`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Firebase DELETE failed: ' + res.status);
+}
+
+// ---- Google Sheets sync ----
+// Fire-and-forget — uses no-cors so it won't block UI even if the
+// Apps Script URL isn't configured yet or CORS blocks the response.
+function syncToSheet(action, entry) {
+  if (!SHEETS_WEBHOOK_URL || SHEETS_WEBHOOK_URL.indexOf('YOUR_') === 0) return;
+  fetch(SHEETS_WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      action,                  // "add" | "delete" | "balance"
+      date: entry?.date || '',
+      type: entry?.type || '',
+      balance: state.pendingBalance,
+      timestamp: new Date().toISOString()
+    })
+  }).catch(() => { /* silent fail, non-critical */ });
+}
+
+// ---- Admin / Login ----
+function onAdminPillClick() {
+  if (isAdmin) {
+    // Logout
+    isAdmin = false;
+    updateAdminUI();
+    showToast('🔒 Admin mode disabled');
+  } else {
+    openLoginModal();
+  }
+}
+
+function openLoginModal() {
+  document.getElementById('admin-pass').value = '';
+  document.getElementById('modal-error').textContent = '';
+  document.getElementById('login-modal').classList.add('show');
+  setTimeout(() => document.getElementById('admin-pass').focus(), 150);
+}
+
+function closeLoginModal() {
+  document.getElementById('login-modal').classList.remove('show');
+}
+
+function attemptLogin() {
+  const val = document.getElementById('admin-pass').value;
+  if (val === ADMIN_PASSWORD) {
+    isAdmin = true;
+    closeLoginModal();
+    updateAdminUI();
+    showToast('🔓 Admin mode enabled');
+  } else {
+    document.getElementById('modal-error').textContent = 'Incorrect password. Try again.';
+  }
+}
+
+document.getElementById('admin-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') attemptLogin();
+});
+
+function updateAdminUI() {
+  const pill = document.getElementById('admin-pill');
+  pill.classList.toggle('active', isAdmin);
+  document.getElementById('admin-pill-icon').textContent = isAdmin ? '🔓' : '🔒';
+  document.getElementById('admin-pill-text').textContent = isAdmin ? 'Admin Mode' : 'Admin';
+
+  document.getElementById('bal-minus').disabled = !isAdmin;
+  document.getElementById('bal-plus').disabled  = !isAdmin;
+  document.getElementById('bal-sub').textContent = isAdmin
+    ? 'Manual balance control · 🔓 Unlocked'
+    : 'Manual balance control · 🔒 Admin only';
+
+  render();
 }
 
 // ---- Init ----
@@ -459,8 +622,6 @@ async function initApp() {
       fbGet('entries'),
       fbGet('balance')
     ]);
-
-    // entriesRaw is an object keyed by date, or null
     if (entriesRaw) {
       state.entries = Object.values(entriesRaw).sort((a,b) => b.date.localeCompare(a.date));
     }
@@ -478,19 +639,20 @@ async function initApp() {
   document.getElementById('date-pick').value = new Date().toISOString().split('T')[0];
   render();
 }
-
 initApp();
 
-// ---- Balance ----
+// ---- Balance (admin only) ----
 async function changeBalance(delta) {
-  if (!dbReady) return;
+  if (!dbReady || !isAdmin) return;
   state.pendingBalance = Math.max(0, state.pendingBalance + delta);
   render();
-  try { await fbSet('balance', state.pendingBalance); }
-  catch(e) { showToast('⚠️ Balance sync failed'); }
+  try {
+    await fbSet('balance', state.pendingBalance);
+    syncToSheet('balance', null);
+  } catch(e) { showToast('⚠️ Balance sync failed'); }
 }
 
-// ---- Add Entry ----
+// ---- Add Entry (open to everyone) ----
 async function addEntry(type) {
   if (!dbReady) { showToast('⚠️ Not connected'); return; }
   const dateVal = document.getElementById('date-pick').value;
@@ -501,7 +663,6 @@ async function addEntry(type) {
 
   const entry = { date: dateVal, type };
 
-  // Optimistic UI
   state.entries.push(entry);
   state.entries.sort((a,b) => b.date.localeCompare(a.date));
   if (type === 'missed') state.pendingBalance = Math.max(0, state.pendingBalance + 1);
@@ -509,20 +670,23 @@ async function addEntry(type) {
   showToast(type === 'got' ? '✅ Got Off saved!' : '❌ Missed Off recorded');
 
   try {
-    // Use date as key so no duplicates possible in DB
     await fbSet(`entries/${dateVal}`, entry);
     if (type === 'missed') await fbSet('balance', state.pendingBalance);
+    syncToSheet('add', entry);
   } catch(e) {
     showToast('❌ Sync failed');
-    // Rollback
     state.entries = state.entries.filter(en => en.date !== dateVal);
     if (type === 'missed') state.pendingBalance = Math.max(0, state.pendingBalance - 1);
     render();
   }
 }
 
-// ---- Delete Entry ----
+// ---- Delete Entry (admin only) ----
 async function deleteEntry(date) {
+  if (!isAdmin) {
+    showToast('🔒 Admin login required to delete');
+    return;
+  }
   if (!dbReady) return;
   const entry = state.entries.find(e => e.date === date);
   if (!entry) return;
@@ -535,6 +699,7 @@ async function deleteEntry(date) {
   try {
     await fbDelete(`entries/${date}`);
     if (entry.type === 'missed') await fbSet('balance', state.pendingBalance);
+    syncToSheet('delete', entry);
   } catch(e) {
     showToast('❌ Delete sync failed');
     state.entries.push(entry);
@@ -602,7 +767,9 @@ function render() {
           <div class="entry-date">${formatDate(e.date)}</div>
           <div class="entry-status">${e.type === 'got' ? '✅ Got Off' : '❌ Missed Off'}</div>
         </div>
-        <button class="entry-del" onclick="deleteEntry('${e.date}')" title="Delete">✕</button>
+        <button class="entry-del ${isAdmin ? '' : 'locked'}" onclick="deleteEntry('${e.date}')" title="${isAdmin ? 'Delete' : 'Admin login required'}">
+          ${isAdmin ? '✕' : '🔒'}
+        </button>
       </div>
     `).join('');
   }
@@ -704,7 +871,6 @@ async function exportPDF() {
       doc.setDrawColor(255,255,255,10); doc.setLineWidth(0.15);
       for (let x=0;x<=W;x+=12) doc.line(x,0,x,H);
       for (let ly=0;ly<=H;ly+=12) doc.line(0,ly,W,ly);
-      // column headers
       doc.setFillColor(255,255,255,8); doc.rect(ml,10,mr-ml,8,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(148,163,184);
       doc.text('#',ml+3,15.5); doc.text('DATE',ml+12,15.5);
@@ -712,13 +878,11 @@ async function exportPDF() {
       y = 20;
     }
 
-    // Background + grid
     doc.setFillColor(10,10,15); doc.rect(0,0,W,H,'F');
     doc.setDrawColor(255,255,255,10); doc.setLineWidth(0.15);
     for (let x=0;x<=W;x+=12) doc.line(x,0,x,H);
     for (let ly=0;ly<=H;ly+=12) doc.line(0,ly,W,ly);
 
-    // Header
     doc.setFillColor(245,158,11,20);
     doc.roundedRect(ml,10,mr-ml,38,4,4,'F');
     doc.setDrawColor(245,158,11,80); doc.setLineWidth(0.4);
@@ -730,7 +894,6 @@ async function exportPDF() {
     doc.text(`Generated: ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}`, W/2, 41, {align:'center'});
     y = 56;
 
-    // Stat boxes
     const statW = (mr-ml-8)/3;
     [
       { label:'Got Off',  val:got,     r:34,  g:197, b:94  },
@@ -747,7 +910,6 @@ async function exportPDF() {
     });
     y += 30;
 
-    // Progress bar section
     doc.setFillColor(30,30,40); doc.roundedRect(ml,y,mr-ml,28,3,3,'F');
     doc.setDrawColor(255,255,255,12); doc.setLineWidth(0.3); doc.roundedRect(ml,y,mr-ml,28,3,3,'S');
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(241,245,249);
@@ -764,7 +926,6 @@ async function exportPDF() {
     doc.setTextColor(100,116,139);doc.text(`Total: ${total}`,     bx+100,y+23);
     y += 36;
 
-    // History heading
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(100,116,139);
     doc.text('HISTORY LOG', ml, y+5);
     doc.setDrawColor(255,255,255,15); doc.setLineWidth(0.3);
@@ -776,7 +937,6 @@ async function exportPDF() {
       doc.text('No entries recorded yet.', ml, y+6);
       y += 14;
     } else {
-      // Table header
       doc.setFillColor(255,255,255,8); doc.rect(ml,y,mr-ml,8,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(148,163,184);
       doc.text('#',ml+3,y+5.5); doc.text('DATE',ml+12,y+5.5);
@@ -807,7 +967,6 @@ async function exportPDF() {
         y += 8;
       });
 
-      // Totals row
       y += 2;
       doc.setFillColor(245,158,11,20); doc.roundedRect(ml,y,mr-ml,10,2,2,'F');
       doc.setDrawColor(245,158,11,60); doc.setLineWidth(0.3); doc.roundedRect(ml,y,mr-ml,10,2,2,'S');
@@ -815,7 +974,6 @@ async function exportPDF() {
       doc.text(`Total: ${state.entries.length} entries  ·  Got Off: ${got}  ·  Missed: ${missed}  ·  Balance: ${balance}`, W/2, y+6.5, {align:'center'});
     }
 
-    // Footer on every page
     const pages = doc.internal.getNumberOfPages();
     for (let p=1; p<=pages; p++) {
       doc.setPage(p);
