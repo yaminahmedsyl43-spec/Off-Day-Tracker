@@ -499,7 +499,7 @@ const ADMIN_PASSWORD = "Yamin@83";
 
 // 3) Google Apps Script Web App URL (for Google Sheets sync)
 //    See instructions below for how to create this.
-const SHEETS_WEBHOOK_URL = "https://off-day-tracker-cec68-default-rtdb.europe-west1.firebasedatabase.app/";
+const SHEETS_WEBHOOK_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
 // Example: "https://script.google.com/macros/s/AKfycb.../exec"
 
 // ============================================================
@@ -612,6 +612,9 @@ function updateAdminUI() {
     ? 'Manual balance control · 🔓 Unlocked'
     : 'Manual balance control · 🔒 Admin only';
 
+  document.getElementById('btn-got').disabled    = !(isAdmin && dbReady);
+  document.getElementById('btn-missed').disabled = !(isAdmin && dbReady);
+
   render();
 }
 
@@ -629,15 +632,13 @@ async function initApp() {
 
     dbReady = true;
     setStatus('connected', 'Firebase Connected');
-    document.getElementById('btn-got').disabled    = false;
-    document.getElementById('btn-missed').disabled = false;
   } catch(e) {
     console.error(e);
     setStatus('error', 'Connection Failed — Check DB URL');
   }
   document.getElementById('loader').classList.add('hidden');
   document.getElementById('date-pick').value = new Date().toISOString().split('T')[0];
-  render();
+  updateAdminUI();
 }
 initApp();
 
@@ -654,6 +655,7 @@ async function changeBalance(delta) {
 
 // ---- Add Entry (open to everyone) ----
 async function addEntry(type) {
+  if (!isAdmin) { showToast('🔒 Admin login required to add entries'); return; }
   if (!dbReady) { showToast('⚠️ Not connected'); return; }
   const dateVal = document.getElementById('date-pick').value;
   if (!dateVal) { showToast('⚠️ Please select a date'); return; }
